@@ -1,0 +1,2 @@
+ pip3 install --user --upgrade virtualenv
+import jupyter, matplotlib, numpy, pandas, scipy, sklearn
