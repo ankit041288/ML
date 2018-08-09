@@ -98,3 +98,12 @@ imputer.fit(housing_num)
 X = imputer.transform(housing_num)
 
 housing_tr = pd.DataFrame(X, columns=housing_num.columns)
+
+#Handling Test And Categorical Attributes
+housing_cat = housing["ocean_proximity"]
+housing_cat.head()
+
+#Converting category to numbers
+housing_cat_endode, housing_categories = housing_cat.factorize()
+print(housing_cat_endode[:10])
+print(housing_categories)

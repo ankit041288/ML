@@ -1,5 +1,5 @@
 # ML
-#Steps to create a ML Modle 
+#Steps to create a ML Model
 _**Look at the big picture.
 
 Get the data.
