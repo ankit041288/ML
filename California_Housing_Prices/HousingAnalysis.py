@@ -5,6 +5,18 @@ import hashlib
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.preprocessing import Imputer
+from sklearn.preprocessing import OneHotEncoder
+
+from sklearn.pipeline import FeatureUnion
+
+from California_Housing_Prices import CombinedAttributesAdder
+from California_Housing_Prices import DataFrameSelector
+
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LinearRegression
+
+
 
 
 # Load CSV file in pandas
@@ -104,6 +116,77 @@ housing_cat = housing["ocean_proximity"]
 housing_cat.head()
 
 #Converting category to numbers
-housing_cat_endode, housing_categories = housing_cat.factorize()
-print(housing_cat_endode[:10])
+housing_cat_encode, housing_categories = housing_cat.factorize()
+print(housing_cat_encode[:10])
 print(housing_categories)
+
+
+# SkLearn One Hot Vector
+#Scikit-Learn provides a OneHotEncoder encoder to convert integer categorical values into one-hot vectors.
+# One hot vector meaning only one "1" per row .. with N Columns
+#One hot encoding is a process by which categorical variables are converted into a form that could be provided to ML algorithms to do a better job in prediction.
+encoder = OneHotEncoder()
+housing_cat_1hot = encoder.fit_transform(housing_cat_encode.reshape(-1,1))
+housing_cat_1hot
+
+#If a categorical attribute has a large number of possible categories
+# (e.g., country code, profession, species, etc.), then one-hot encoding will result in a
+# large number of input features. This may slow down training and degrade performance.
+#  If this happens, you will want to produce denser representations called embeddings,
+# but this requires a good understanding of neural networks (see Chapter 14 for more details).
+attr_adder = CombinedAttributesAdder(add_bedrooms_per_room=False)
+housing_extra_attribs = attr_adder.transform(housing.values)
+
+
+#As you can see, there are many data transformation steps
+#  that need to be executed in the right order. Fortunately,
+# Scikit-Learn provides the Pipeline class to help with such sequences
+# of transformations. Here is a small pipeline for the numerical attributes:
+
+
+
+#The Pipeline constructor takes a list of name/estimator pairs defining a sequence of steps
+num_pipeline = Pipeline([
+        ('imputer', Imputer(strategy="median")),
+        ('attribs_adder', CombinedAttributesAdder()),
+        ('std_scaler', StandardScaler()),
+    ])
+#When you call the pipeline’s fit() method, it calls fit_transform()
+# sequentially on all transformers, passing the output of each call as
+# the parameter to the next call, until it reaches the final estimator,
+# for which it just calls the fit() method.
+
+housing_num_tr = num_pipeline.fit_transform(housing_num)
+
+
+num_attributes = list(housing_num)
+cat_attributes = ["ocean_proximity"]
+num_pipeline = Pipeline([
+        ('selector', DataFrameSelector(num_attributes)),
+        ('imputer', Imputer(strategy="median")),
+        ('attribs_adder', CombinedAttributesAdder()),
+        ('std_scaler', StandardScaler()),
+    ])
+
+cat_pipeline = Pipeline([
+        ('selector', DataFrameSelector(cat_attributes)),
+        ('cat_encoder', OneHotEncoder(encoding="onehot-dense")),
+    ])
+
+full_pipeline = FeatureUnion(transformer_list=[
+        ("num_pipeline", num_pipeline),
+        ("cat_pipeline", cat_pipeline),
+    ])
+
+
+
+
+housing_prepared = full_pipeline.fit_transform(housing)
+
+
+# Select And train Model
+lin_reg = LinearRegression()
+#lin_reg.fit(housing_prepared, housing_labels)
+
+
+
